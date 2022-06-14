@@ -72,7 +72,7 @@ void BodySensor::Initialise(IKinectSensor* _sensor)
     check(result == S_OK);
 
     // prepare the gesture sources
-    for (int i = 0; i < BodyNumber_Count; ++i)
+    /*for (int i = 0; i < BodyNumber_Count; ++i)
     {
         Skeleton* s = &skeletons[i];
         result = CreateVisualGestureBuilderFrameSource(sensor, 0, &s->Gestures.Source);
@@ -104,7 +104,7 @@ void BodySensor::Initialise(IKinectSensor* _sensor)
         check(result == S_OK);
 
         delete[] gestures;
-    }
+    }*/
 
     // attempt to open the sensor
     result = sensor->Open();
@@ -130,12 +130,12 @@ bool BodySensor::Tick(float deltaTime)
     if (signal == WAIT_OBJECT_0) ProcessBodyFrame();
 
     // process each skellyboye, if present
-    for (int i = 0; i < BodyNumber_Count; ++i)
+    /*for (int i = 0; i < BodyNumber_Count; ++i)
     {
         h = reinterpret_cast<HANDLE>(skeletons[i].Gestures.GestureWaitHandle);
         signal = WaitForSingleObject(h, 1);
         if (signal == WAIT_OBJECT_0) ProcessVgbFrame((EBodyNumber)i);
-    }
+    }*/
 
     return result;
 }
@@ -279,9 +279,22 @@ void BodySensor::ProcessBodyFrame()
             if (skeletons[idx].TrackingID != trackingId)
             {
                 skeletons[idx].TrackingID = trackingId;
-                UpdateGestureSource((EBodyNumber)idx, trackingId);
+                //UpdateGestureSource((EBodyNumber)idx, trackingId);
             }
+
             ConvertRepresentationKinectToJester(&bodies[idx], (EBodyNumber)idx);
+
+			/*
+			HandState state;
+			if (bodies[idx]->get_HandLeftState(&state) == S_OK)
+			{
+				skeletons[(EBodyNumber)idx].Hands[Hand_LeftHand].Hand.State = TEnumAsByte<EHandTrackedState>(state);
+			}
+
+			if (bodies[idx]->get_HandRightState(&state) == S_OK)
+			{
+				skeletons[(EBodyNumber)idx].Hands[Hand_RightHand].Hand.State = TEnumAsByte<EHandTrackedState>(state);
+			}*/
         }
     }
 
@@ -307,10 +320,10 @@ void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
     IVisualGestureBuilderFrameArrivedEventArgs* args = nullptr;
     IVisualGestureBuilderFrameReference* ref = nullptr;
     IVisualGestureBuilderFrame* frame = nullptr;
-    GestureType type;
-    BOOLEAN detected;
-    float confidence;
-    float progress;
+    GestureType type = GestureType_Discrete;
+    BOOLEAN detected = FALSE;
+    float confidence = 0.0f;
+    float progress = 0.0f;
     wchar_t gestureName[260];
 
     // clear out the existing list
@@ -383,29 +396,29 @@ void BodySensor::ConvertRepresentationKinectToJester(IBody** body, EBodyNumber s
     Joint joints[Joint_Count], j;
     JointOrientation orientations[Joint_Count], o;
 
-    if ((*body)->GetJoints(Joint_Count, joints) == S_OK &&
-        (*body)->GetJointOrientations(Joint_Count, orientations) == S_OK)
-    {
-        for (int i = 0; i < Joint_Count; i++)
-        {
-            j = joints[i];
-            o = orientations[i];
+	if ((*body)->GetJoints(Joint_Count, joints) == S_OK &&
+		(*body)->GetJointOrientations(Joint_Count, orientations) == S_OK)
+	{
+		for (int i = 0; i < Joint_Count; i++)
+		{
+			j = joints[i];
+			o = orientations[i];
 
-            skeletons[skeletonId].Joints[i].Type = TEnumAsByte<EJoint>(j.JointType);
-            skeletons[skeletonId].Joints[i].TrackingState = TEnumAsByte<ETrackedState>(j.TrackingState);
-            skeletons[skeletonId].Joints[i].Position = FVector(
-                j.Position.X,
-                j.Position.Y,
-                j.Position.Z
-            );
-            skeletons[skeletonId].Joints[i].Orientation = FVector4(
-                o.Orientation.x,
-                o.Orientation.y,
-                o.Orientation.z,
-                o.Orientation.w
-            );
-        }
-    }
+			skeletons[skeletonId].Joints[i].Type = TEnumAsByte<EJoint>(j.JointType);
+			skeletons[skeletonId].Joints[i].TrackingState = TEnumAsByte<ETrackedState>(j.TrackingState);
+			skeletons[skeletonId].Joints[i].Position = FVector(
+				j.Position.X,
+				j.Position.Y,
+				j.Position.Z
+			);
+			skeletons[skeletonId].Joints[i].Orientation = FVector4(
+				o.Orientation.x,
+				o.Orientation.y,
+				o.Orientation.z,
+				o.Orientation.w
+			);
+		}
+	}
 }
 
 void BodySensor::UpdateGestureSource(EBodyNumber skeletonId, UINT64 newTrackingId)
