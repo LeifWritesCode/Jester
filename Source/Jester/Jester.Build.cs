@@ -69,7 +69,7 @@ public class Jester : ModuleRules
                 break;
 
             case UnrealTargetPlatform.Win32:
-                Console.WriteLine("Building Jester for 32-bit build.");
+                Console.WriteLine("Preparing Jester for 32-bit build.");
                 PlatformBitness = "x86";
                 PlatformTarget = "Win32";
                 break;
