@@ -311,7 +311,7 @@ void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
     BOOLEAN detected;
     float confidence;
     float progress;
-    const char * gestureName = "Seated";
+    wchar_t gestureName[260];
 
     // clear out the existing list
     s->Gestures.Detected.clear();
@@ -340,7 +340,9 @@ void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
             result = gestures[id]->get_GestureType(&type);
 
             // TODO: Understand why get_Name is throwing E_INVALIDARG
-            //result = gestures[id]->get_Name(32u, &gestureName[0]);
+            // apparently, 260 is a genuinely magic number
+            result = gestures[id]->get_Name(260, &gestureName[0]);
+            check(result == S_OK);
 
             // for each gesture, check to see if it has been detected
             if (type == GestureType_Discrete)
