@@ -12,42 +12,108 @@ public class Jester : ModuleRules
     {
         get
         {
-            return Path.Combine(ModuleDirectory, "KinectSDK");
+            return Utils.ResolveEnvironmentVariable("%KINECTSDK20_DIR%");
         }
     }
 
-    private bool LinkKinect(ReadOnlyTargetRules target)
+    private string ModuleRoot
     {
-        bool supported = true;
-
-        if (target.Platform != UnrealTargetPlatform.Win64)
+        get
         {
-            Console.WriteLine("Jester must be built in 64-bit mode.");
-            supported = false;
+            return Path.Combine(ModuleDirectory, @"..\..\");
+        }
+    }
+
+    private string PlatformBitness { get; set; }
+    private string PlatformTarget { get; set; }
+
+    private void ImportAndCopy(FileInfo file)
+    {
+        if (!File.Exists(file.FullName))
+            throw new FileNotFoundException("Failed to import requested module.", file.FullName);
+
+        Console.WriteLine("\tAdding dependency on {0}.", file.FullName);
+        RuntimeDependencies.Add(file.FullName);
+        string dest = Path.Combine(ModuleRoot, "binaries", PlatformTarget, file.Name);
+
+        if (File.Exists(dest))
+        {
+            Console.WriteLine("\tDeleting existing file {0}.", dest);
+            File.Delete(dest);
         }
 
-        if (supported)
+        Console.WriteLine("\tCopying {0} to {1}.", file.FullName, dest);
+        File.Copy(file.FullName, dest);
+
+        Console.WriteLine("\tDeferring load of {0} to runtime.", file.Name);
+        PublicDelayLoadDLLs.Add(file.Name);
+    }
+
+    private void ImportFromDirectoryMatching(string dir, string match)
+    {
+        foreach (string f in Directory.GetFiles(dir))
         {
-            PublicIncludePaths.Add(Path.Combine(KinectSdkPath, "inc"));
-            PublicLibraryPaths.Add(Path.Combine(KinectSdkPath, "lib"));
-            PublicAdditionalLibraries.Add("Kinect20.Face.Lib");
-            PublicAdditionalLibraries.Add("Kinect20.Fusion.Lib");
-            PublicAdditionalLibraries.Add("Kinect20.Lib");
-            PublicAdditionalLibraries.Add("Kinect20.VisualGestureBuilder.Lib");
+            if (f.Contains(match))
+                ImportAndCopy(new FileInfo(f));
+        }
+    }
+
+    private void LinkKinect(ReadOnlyTargetRules target)
+    {
+        switch (target.Platform)
+        {
+            case UnrealTargetPlatform.Win64:
+                Console.WriteLine("Preparing Jester for 64-bit build.");
+                PlatformBitness = "x64";
+                PlatformTarget = "Win64";
+                break;
+
+            case UnrealTargetPlatform.Win32:
+                Console.WriteLine("Building Jester for 32-bit build.");
+                PlatformBitness = "x86";
+                PlatformTarget = "Win32";
+                break;
+
+            default:
+                throw new PlatformNotSupportedException("Jester only supports Windows x86/x64 targets.");
         }
 
-        return supported;
+        string libPath = Path.Combine(KinectSdkPath, "lib", PlatformBitness);
+        string incPath = Path.Combine(KinectSdkPath, "inc");
+        string redistPath = Path.Combine(KinectSdkPath, "redist");
+        string vgbPath = Path.Combine(redistPath, "VGB", PlatformBitness);
+        string vgbTechPath = Path.Combine(vgbPath, "vgbtechs");
+        string corePath = @"C:\Windows\System32\";
+        string dllPrefix = @"Kinect20";
+        string dllSuffix = @".dll";
+
+        Console.WriteLine("Including Kinect SDK headers from {0}", incPath);
+        PublicIncludePaths.Add(incPath);
+
+        Console.WriteLine("Importing Kinect SDK static libraries from {0}", libPath);
+        PublicLibraryPaths.Add(libPath);
+        foreach (string f in Directory.GetFiles(libPath))
+        {
+            Console.WriteLine("\tAdding additional library {0}", f);
+            PublicAdditionalLibraries.Add(f);
+        }
+
+        Console.WriteLine("Importing Kinect Visual Gesture Builder SDK from {0}", vgbPath);
+        ImportFromDirectoryMatching(vgbPath, dllPrefix);
+
+        Console.WriteLine("Importing Kinect Visual Gesture Builder Tech SDK from {0}", vgbTechPath);
+        ImportFromDirectoryMatching(vgbTechPath, dllSuffix);
+
+        Console.WriteLine("Importing Kinect SDK Core from {0}", corePath);
+        ImportAndCopy(new FileInfo(Path.Combine(corePath, "Kinect20.dll")));
     }
 
 	public Jester(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        if (!Directory.Exists(KinectSdkPath))
-        {
-            Console.WriteLine(String.Format("Kinect SDK not found at {0}, aborting", KinectSdkPath));
-            return;
-        }
+        if (string.IsNullOrEmpty(KinectSdkPath) || !Directory.Exists(KinectSdkPath))
+            throw new FileNotFoundException("Kinect v2 SDK not found. Please check your installation.");
 
         LinkKinect(Target);
 
