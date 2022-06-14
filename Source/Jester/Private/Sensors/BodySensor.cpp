@@ -152,36 +152,50 @@ bool BodySensor::SetGestureDatabase(std::string filename)
 
 bool BodySensor::IsBodyTracked(EBodyNumber skeletonId)
 {
+    if (skeletonId == BodyNumber_Count) return false;
     FScopeLock Lock(&apiMutex);
     return skeletons[skeletonId].Tracked;
 }
 
 FVector2D BodySensor::GetLean(EBodyNumber skeletonId)
 {
+    if (skeletonId == BodyNumber_Count) return FVector2D();
     FScopeLock Lock(&apiMutex);
     return skeletons[skeletonId].Lean;
 }
 
 std::vector<FGesture> BodySensor::GetGestures(EBodyNumber skeletonId)
 {
+    if (skeletonId == BodyNumber_Count) return std::vector<FGesture>(0);
     FScopeLock Lock(&apiMutex);
     return skeletons[skeletonId].Gestures.Detected;
 }
 
+FHand BodySensor::GetHand(EBodyNumber skeletonId, EHand hand)
+{
+    if (skeletonId == BodyNumber_Count || hand == Hand_None) return FHand();
+
+    FScopeLock Lock(&apiMutex);
+    return skeletons[skeletonId].Hands[hand].Hand;
+}
+
 FJoint BodySensor::GetJoint(EBodyNumber skeletonId, EJoint joint)
 {
+    if (skeletonId == BodyNumber_Count || joint == Joint_Count) return FJoint();
     FScopeLock Lock(&apiMutex);
     return skeletons[skeletonId].Joints[joint];
 }
 
 FJoint * BodySensor::GetJointPtr(EBodyNumber skeletonId, EJoint joint)
 {
+    if (skeletonId == BodyNumber_Count || joint == Joint_Count) return nullptr;
     FScopeLock Lock(&apiMutex);
     return &(skeletons[skeletonId].Joints[joint]);
 }
 
 bool BodySensor::GetContinuousGestureResult(EBodyNumber skeletonId, FString gestureName, float& outResult)
 {
+    if (skeletonId == BodyNumber_Count) return false;
     FScopeLock Lock(&apiMutex);
     bool result = false;
 
@@ -198,6 +212,7 @@ bool BodySensor::GetContinuousGestureResult(EBodyNumber skeletonId, FString gest
 
 bool BodySensor::GetDiscreteGestureResult(EBodyNumber skeletonId, FString gestureName, bool& outResult, float& outConfidence)
 {
+    if (skeletonId == BodyNumber_Count) return false;
     FScopeLock Lock(&apiMutex);
     
     FGesture f;
@@ -278,11 +293,15 @@ void BodySensor::ProcessBodyFrame()
 
 void BodySensor::ProcessVgbSkeletonLost(EBodyNumber skeletonId)
 {
+    if (skeletonId == BodyNumber_Count) return;
     FScopeLock Lock(&apiMutex);
 }
 
 void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
 {
+    if (skeletonId == BodyNumber_Count) return;
+    FScopeLock Lock(&apiMutex);
+
     HRESULT result = S_OK;
     Skeleton* s = &skeletons[skeletonId];
     IVisualGestureBuilderFrameArrivedEventArgs* args = nullptr;

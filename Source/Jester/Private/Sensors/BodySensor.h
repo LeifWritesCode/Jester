@@ -30,6 +30,9 @@ public:
     // returns the vector of gestures from the given body
     std::vector<FGesture> GetGestures(EBodyNumber skeletonId);
 
+    // returns the specified hand of the specified skeletons
+    FHand GetHand(EBodyNumber skeletonId, EHand hand);
+
     // returns the specified joint of the specified skeleton
     FJoint GetJoint(EBodyNumber skeletonId, EJoint joint);
 

@@ -21,15 +21,23 @@ UJesterBPLibrary::UJesterBPLibrary(const FObjectInitializer& ObjectInitializer)
 
 void UJesterBPLibrary::GetDistanceBetweenJoints(const TEnumAsByte<EJoint> Start, const TEnumAsByte<EJoint> End, const TEnumAsByte<EBodyNumber> Body, float& Distance)
 {
-    FVector a = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Start).Position,
-            b = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, End).Position;
-
+    FVector a, b;
+    ConvertCoordCameraToUnreal(FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Start).Position, a);
+    ConvertCoordCameraToUnreal(FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, End).Position, b);
     Distance = FVector::Distance(a, b);
+}
+
+void UJesterBPLibrary::GetDirectionBetweenJoints(const TEnumAsByte<EJoint> Start, const TEnumAsByte<EJoint> End, const TEnumAsByte<EBodyNumber> Body, FVector& Vector)
+{
+    FVector a, b;
+    ConvertCoordCameraToUnreal(FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Start).Position, a);
+    ConvertCoordCameraToUnreal(FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, End).Position, b);
+    Vector = b - a;
 }
 
 void UJesterBPLibrary::GetJointAbsolutePosition(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FVector& Position)
 {
-    Position = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Joint).Position;
+    ConvertCoordCameraToUnreal(FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Joint).Position, Position);
 }
 
 void UJesterBPLibrary::GetJointTrackedState(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, TEnumAsByte<ETrackedState>& State)
@@ -50,6 +58,7 @@ void UJesterBPLibrary::GetJointDeltaPosition(const TEnumAsByte<EJoint> Joint, co
 void UJesterBPLibrary::GetJointOrientation(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FRotator& Orientation)
 {
     // TODO: GetJointOrientation - need conversion data
+    // INFI: GetJointOrientation - the joints are oriented relative to the last bone, e.g. shoulders are oriented relative to upper-back
     FVector4 o = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Joint).Orientation;
 }
 
@@ -70,6 +79,7 @@ void UJesterBPLibrary::GetPitchAdjustedJointPosition(const TEnumAsByte<EJoint> J
 void UJesterBPLibrary::GetHandState(const TEnumAsByte<EHand> Hand, const TEnumAsByte<EBodyNumber> Body, TEnumAsByte<EHandTrackedState>& State)
 {
     //TODO: GetHandState - BodySensor needs to exponse hand state
+    State = FJesterModule::GetCurrentInstance().BodySensor.GetHand(Body, Hand).State;
 }
 
 void UJesterBPLibrary::GetHandStateAsExecution(const TEnumAsByte<EHand> Hand, const TEnumAsByte<EBodyNumber> Body, TEnumAsByte<EHandTrackedState>& State)
@@ -118,7 +128,7 @@ void UJesterBPLibrary::GetLeanAmount(const TEnumAsByte<EBodyNumber> Body, FVecto
 
 #pragma region device state
 
-// INFO: IsDeviceAwake is probably wrong
+// INFO: IsDeviceAwake is probably wrong, can't just be a case of is open as that will be true so long as Jester is running
 void UJesterBPLibrary::IsDeviceAwake(bool& IsAwake)
 {
     IKinectSensor* sensor;
@@ -135,11 +145,12 @@ void UJesterBPLibrary::GetDevicePitch(float& Pitch)
 {
     // TODO: GetDevicePitch - this isn't exposed by the SDK - needs implementing through delta frames relative to floor plane
 }
+
 #pragma endregion
 
 #pragma region utility
 
-void UJesterBPLibrary::ConvertCoordCameraToUnreal(const FVector& in, FVector& out)
+void UJesterBPLibrary::ConvertCoordCameraToUnreal(const FVector in, FVector& out)
 {
     // adjust from CSP unit (1m) to UE4 unit (1cm)
     FVector inAdjusted(in * FVector(100));
@@ -149,7 +160,7 @@ void UJesterBPLibrary::ConvertCoordCameraToUnreal(const FVector& in, FVector& ou
     out.Z = inAdjusted.Y;
 }
 
-void UJesterBPLibrary::ConvertCoordUnrealToCamera(const FVector& in, FVector& out)
+void UJesterBPLibrary::ConvertCoordUnrealToCamera(const FVector in, FVector& out)
 {
     // adjust from UE4 unit (1cm) to CSP unit (1m)
     FVector inAdjusted(in / FVector(100));
@@ -163,19 +174,21 @@ void UJesterBPLibrary::ConvertCoordUnrealToCamera(const FVector& in, FVector& ou
 
 #pragma region gesture
 
-void UJesterBPLibrary::GetDiscreteGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, bool& Detected, float& Confidence)
+void UJesterBPLibrary::GetDiscreteGestureResult(const EBodyNumber Body, const FString Name, bool& Found, bool& Detected, float& Confidence)
 {
     Found = FJesterModule::GetCurrentInstance().BodySensor.GetDiscreteGestureResult(Body, Name, Detected, Confidence);
 }
 
-void UJesterBPLibrary::GetContinuousGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, float& Progress)
+void UJesterBPLibrary::GetContinuousGestureResult(const EBodyNumber Body, const FString Name, bool& Found, float& Progress)
 {
     Found = FJesterModule::GetCurrentInstance().BodySensor.GetContinuousGestureResult(Body, Name, Progress);
 }
 
 // this doesn't differentiate between continuous and discrete, which is an issue since the idea is to
 // seamlessly pull gesture data from a for
-void UJesterBPLibrary::GetRecognisedGesturesAsArray(const EBodyNumber& Body, const float& ProgressThreshold, TArray<FString>& Gestures)
+// TODO: GetRecognisedGesturesAsArray should support differentiating between types
+// INFO: GetRecognisedGesturesAsArray multi-type support can be done using pins, two arrays - one for each type.
+void UJesterBPLibrary::GetRecognisedGesturesAsArray(const EBodyNumber Body, const float ProgressThreshold, TArray<FString>& Gestures)
 {
     std::vector<FGesture> g = FJesterModule::GetCurrentInstance().BodySensor.GetGestures(Body);
     for (int i = 0; i < g.size(); ++i)

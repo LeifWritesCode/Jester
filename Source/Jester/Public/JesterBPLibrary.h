@@ -37,6 +37,9 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintPure, Category = "Jester|Joint", DisplayName = "Get Distance Between Joints")
     static void GetDistanceBetweenJoints(const TEnumAsByte<EJoint> Start, const TEnumAsByte<EJoint> End, const TEnumAsByte<EBodyNumber> Body, float& Distance);
 
+    UFUNCTION(BlueprintPure, Category = "Jester|Joint", DisplayName = "Get Direction Between Joints")
+    static void GetDirectionBetweenJoints(const TEnumAsByte<EJoint> Start, const TEnumAsByte<EJoint> End, const TEnumAsByte<EBodyNumber> Body, FVector& Vector);
+
     UFUNCTION(BlueprintPure, Category = "Jester|Joint", DisplayName = "Get Joint Absolute Position")
     static void GetJointAbsolutePosition(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FVector& Position);
 
@@ -106,21 +109,21 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
      */
 
     UFUNCTION(BlueprintPure, Category = "Jester|Utility", DisplayName = "Convert CSP to Unreal Coord")
-    static void ConvertCoordCameraToUnreal(const FVector& in, FVector& out);
+    static void ConvertCoordCameraToUnreal(const FVector in, FVector& out);
 
     UFUNCTION(BlueprintPure, Category = "Jester|Utility", DisplayName = "Convert Unreal Coord to CSP")
-    static void ConvertCoordUnrealToCamera(const FVector& in, FVector& out);
+    static void ConvertCoordUnrealToCamera(const FVector in, FVector& out);
 
     /**
      * gesture
      */
 
     UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Discrete Gesture Result")
-    static void GetDiscreteGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, bool& Detected, float& Confidence);
+    static void GetDiscreteGestureResult(const EBodyNumber Body, const FString Name, bool& Found, bool& Detected, float& Confidence);
 
     UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Continuous Gesture Result")
-    static void GetContinuousGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, float& Progress);
+    static void GetContinuousGestureResult(const EBodyNumber Body, const FString Name, bool& Found, float& Progress);
 
     UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Recognised Gestures")
-    static void GetRecognisedGesturesAsArray(const EBodyNumber& Body, const float& ProgressThreshold, TArray<FString>& Gestures);
+    static void GetRecognisedGesturesAsArray(const EBodyNumber Body, const float ProgressThreshold, TArray<FString>& Gestures);
 };
