@@ -21,7 +21,10 @@ UJesterBPLibrary::UJesterBPLibrary(const FObjectInitializer& ObjectInitializer)
 
 void UJesterBPLibrary::GetDistanceBetweenJoints(const TEnumAsByte<EJoint> Start, const TEnumAsByte<EJoint> End, const TEnumAsByte<EBodyNumber> Body, float& Distance)
 {
-    // TODO: GetDistanceBetweenJoints
+    FVector a = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Start).Position,
+            b = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, End).Position;
+
+    Distance = FVector::Distance(a, b);
 }
 
 void UJesterBPLibrary::GetJointAbsolutePosition(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FVector& Position)
@@ -41,22 +44,23 @@ void UJesterBPLibrary::GetJointTrackedStateAsExecution(const TEnumAsByte<EJoint>
 
 void UJesterBPLibrary::GetJointDeltaPosition(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FVector& Position)
 {
-    // TODO: GetJointDeltaPosition
+    // TODO: GetJointDeltaPosition - need to track last two frames for this one
 }
 
 void UJesterBPLibrary::GetJointOrientation(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FRotator& Orientation)
 {
-    // TODO: GetJointOrientation
+    // TODO: GetJointOrientation - need conversion data
+    FVector4 o = FJesterModule::GetCurrentInstance().BodySensor.GetJoint(Body, Joint).Orientation;
 }
 
 void UJesterBPLibrary::GetJointRelativePosition(const TEnumAsByte<EJoint> Start, const TEnumAsByte<EBodyNumber> StartBody, const TEnumAsByte<EJoint> End, const TEnumAsByte<EBodyNumber> EndBody, FVector& Position)
 {
-    // TODO: GetJointRelativePosition
+    // TODO: GetJointRelativePosition - in kinect space, vector difference between start and end
 }
 
 void UJesterBPLibrary::GetPitchAdjustedJointPosition(const TEnumAsByte<EJoint> Joint, const TEnumAsByte<EBodyNumber> Body, FVector& Position)
 {
-    // TODO: GetPitchAdjustedJointPosition
+    // TODO: GetPitchAdjustedJointPosition - requires pitch
 }
 
 #pragma endregion
@@ -65,7 +69,7 @@ void UJesterBPLibrary::GetPitchAdjustedJointPosition(const TEnumAsByte<EJoint> J
 
 void UJesterBPLibrary::GetHandState(const TEnumAsByte<EHand> Hand, const TEnumAsByte<EBodyNumber> Body, TEnumAsByte<EHandTrackedState>& State)
 {
-
+    //TODO: GetHandState - BodySensor needs to exponse hand state
 }
 
 void UJesterBPLibrary::GetHandStateAsExecution(const TEnumAsByte<EHand> Hand, const TEnumAsByte<EBodyNumber> Body, TEnumAsByte<EHandTrackedState>& State)
@@ -84,12 +88,14 @@ void UJesterBPLibrary::IsBodyTracked(const TEnumAsByte<EBodyNumber> Body, bool& 
 
 void UJesterBPLibrary::GetNearestBody(TEnumAsByte<EBodyNumber>& Body)
 {
-    // TODO: GetNearestBody
+    // TODO: GetNearestBody - needs an is tracked value, if no bodies return Body_0 and istracked=false
+    // INFO: GetNearestBody is relative to sensor
 }
 
 void UJesterBPLibrary::GetCenteredBody(TEnumAsByte<EBodyNumber>& Body)
 {
-    // TODO: GetCenteredBody
+    // TODO: GetCenteredBody - needs an is tracked value, if no bodies return Body_0 and istracked=false
+    // INFO: GetCenteredBody is relative to sensor X/Y, Z doesn't factor in.
 }
 
 void UJesterBPLibrary::GetTrackedBodies(TArray<TEnumAsByte<EBodyNumber>>& Bodies)
@@ -112,6 +118,7 @@ void UJesterBPLibrary::GetLeanAmount(const TEnumAsByte<EBodyNumber> Body, FVecto
 
 #pragma region device state
 
+// INFO: IsDeviceAwake is probably wrong
 void UJesterBPLibrary::IsDeviceAwake(bool& IsAwake)
 {
     IKinectSensor* sensor;
@@ -126,9 +133,8 @@ void UJesterBPLibrary::IsDeviceAwake(bool& IsAwake)
 
 void UJesterBPLibrary::GetDevicePitch(float& Pitch)
 {
-    // TODO: GetDevicePitch
+    // TODO: GetDevicePitch - this isn't exposed by the SDK - needs implementing through delta frames relative to floor plane
 }
-
 #pragma endregion
 
 #pragma region utility
