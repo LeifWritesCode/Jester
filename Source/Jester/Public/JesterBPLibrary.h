@@ -120,4 +120,7 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
 
     UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Continuous Gesture Result")
     static void GetContinuousGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, float& Progress);
+
+    UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Recognised Gestures")
+    static void GetRecognisedGesturesAsArray(const EBodyNumber& Body, const float& ProgressThreshold, TArray<FString>& Gestures);
 };

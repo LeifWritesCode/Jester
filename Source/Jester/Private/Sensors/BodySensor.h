@@ -24,7 +24,11 @@ public:
     // returns true if the body is actively associated with the kinect device
     bool IsBodyTracked(EBodyNumber skeletonId);
 
+    // gets the x/y lean for the given body
     FVector2D GetLean(EBodyNumber skeletonId);
+
+    // returns the vector of gestures from the given body
+    std::vector<FGesture> GetGestures(EBodyNumber skeletonId);
 
     // returns the specified joint of the specified skeleton
     FJoint GetJoint(EBodyNumber skeletonId, EJoint joint);

@@ -121,16 +121,6 @@ bool BodySensor::Tick(float deltaTime)
     // TODO: if multi-single wait experiment works, need to incorporate return result
     bool result = true;
 
-    /*HANDLE handles[] = {
-        reinterpret_cast<HANDLE> (bodyWaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_0].Gestures.GestureWaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_1].Gestures.GestureWaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_2].Gestures.GestureWaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_3].Gestures.GestureWaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_4].Gestures.GestureWaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_5].Gestures.GestureWaitHandle),
-    };*/
-
     DWORD signal;
     HANDLE h;
 
@@ -146,21 +136,6 @@ bool BodySensor::Tick(float deltaTime)
         signal = WaitForSingleObject(h, 1);
         if (signal == WAIT_OBJECT_0) ProcessVgbFrame((EBodyNumber)i);
     }
-    /*
-    static DWORD count = sizeof(handles) / sizeof(*handles);
-    DWORD signal = MsgWaitForMultipleObjectsEx(count, handles, 1, QS_ALLINPUT, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
-    if (signal != WAIT_FAILED && signal != WAIT_TIMEOUT && signal != WAIT_OBJECT_0 + count)
-    {
-        if (signal == WAIT_OBJECT_0)
-        {
-            ProcessBodyFrame();
-        }
-        else
-        {
-            ProcessVgbFrame((EBodyNumber)(signal - 1));
-        }
-        result = true;
-    }*/
 
     return result;
 }
@@ -185,6 +160,12 @@ FVector2D BodySensor::GetLean(EBodyNumber skeletonId)
 {
     FScopeLock Lock(&apiMutex);
     return skeletons[skeletonId].Lean;
+}
+
+std::vector<FGesture> BodySensor::GetGestures(EBodyNumber skeletonId)
+{
+    FScopeLock Lock(&apiMutex);
+    return skeletons[skeletonId].Gestures.Detected;
 }
 
 FJoint BodySensor::GetJoint(EBodyNumber skeletonId, EJoint joint)

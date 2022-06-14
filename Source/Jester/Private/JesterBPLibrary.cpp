@@ -167,4 +167,14 @@ void UJesterBPLibrary::GetContinuousGestureResult(const EBodyNumber& Body, const
     Found = FJesterModule::GetCurrentInstance().BodySensor.GetContinuousGestureResult(Body, Name, Progress);
 }
 
+// this doesn't differentiate between continuous and discrete, which is an issue since the idea is to
+// seamlessly pull gesture data from a for
+void UJesterBPLibrary::GetRecognisedGesturesAsArray(const EBodyNumber& Body, const float& ProgressThreshold, TArray<FString>& Gestures)
+{
+    std::vector<FGesture> g = FJesterModule::GetCurrentInstance().BodySensor.GetGestures(Body);
+    for (int i = 0; i < g.size(); ++i)
+        if (g[i].Detected || g[i].Progress >= ProgressThreshold)
+            Gestures.Add(g[i].Name);
+}
+
 #pragma endregion
