@@ -5,7 +5,7 @@
 
 #include "Containers/Ticker.h"
 #include "ModuleManager.h"
-#include "BodySensor.h"
+#include "Sensors/BodySensor.h"
 
 class FJesterModule : public IModuleInterface
 {
@@ -17,8 +17,8 @@ public:
 
     static FJesterModule& GetCurrentInstance();
 
-    float MultiplyByTenTest(float input);
-    BodySensor& GetBodySensor();
+    // the skeleton and gesture sensor
+    BodySensor BodySensor;
 private:
     // updates the sensors every frame
     virtual bool Tick(float deltaTime);
@@ -27,6 +27,4 @@ private:
     FTickerDelegate tickDelegate;
     FDelegateHandle tickDelegateHandle;
 
-    // the skeleton and gesture sensor
-    BodySensor bodySensor;
 };

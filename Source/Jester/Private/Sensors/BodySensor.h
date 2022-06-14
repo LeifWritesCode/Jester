@@ -24,17 +24,13 @@ public:
     // returns true if the body is actively associated with the kinect device
     bool IsBodyTracked(EBodyNumber skeletonId);
 
+    FVector2D GetLean(EBodyNumber skeletonId);
+
     // returns the specified joint of the specified skeleton
     FJoint GetJoint(EBodyNumber skeletonId, EJoint joint);
 
     // returns a pointer to the specified joint of the specified skeleton
     FJoint* GetJointPtr(EBodyNumber skeletonId, EJoint joint);
-
-    // returns orientation of the specified joint of the specified skeleton
-    FJointOrientation GetJointOrientation(EBodyNumber skeletonId, EJoint joint);
-
-    // returns orientation of the specified joint of the specified skeleton
-    FJointOrientation* GetJointOrientationPtr(EBodyNumber skeletonId, EJoint joint);
 
     // returns true and sets outResult if gesture is found, else false
     bool GetContinuousGestureResult(EBodyNumber skeletonId, std::string gestureName, float* outResult);
@@ -47,15 +43,36 @@ private:
     // kinect api is C style, so no way to overload constructors using delegation
     void Initialise(IKinectSensor* sensor);
 
+    // process a single frame of data, if available
+    void ProcessBodyFrame();
+
+    // frees up source assets when tracking is lost
+    void ProcessVgbSkeletonLost(EBodyNumber skeletonId);
+
+    void ProcessVgbFrame(EBodyNumber skeletonId);
+
+    // converts a Kinect IBody to a Jester Skeleton
+    void ConvertRepresentationKinectToJester(IBody** body, EBodyNumber skeletonId);
+
+    // creates the necessary assets for gesture recognition
+    void RegenerateGestureSource(EBodyNumber skeletonId, UINT64 newTrackingId);
+
+    // local copy so we can close it later
+    IKinectSensor* sensor;
+
+    // thread safety
+    FCriticalSection apiMutex;
+
     // handle on which we wait for frame events
     WAITABLE_HANDLE bodyWaitHandle;
 
-    // source of body frames
+    // source of body frames - not per skeleton
     IBodyFrameSource * bodySource;
     IBodyFrameReader * bodyReader;
 
     // gestures loaded
-    IGesture * gestureLibrary;
+    size_t numGesturesInLibrary;
+    IGesture ** gestureLibrary;
 
     // the tracked skeletons
     Skeleton skeletons[BodyNumber_Count];

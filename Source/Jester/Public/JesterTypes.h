@@ -70,8 +70,8 @@ enum EJoint
     Joint_SpineShoulder = 20 UMETA(DisplayName = "Top of Spine"),
     Joint_HandTipLeft   = 21 UMETA(DisplayName = "Tip of the Left Hand"),
     Joint_ThumbLeft     = 22 UMETA(DisplayName = "Left Thumb"),
-    Joint_HandTipRight  = 24 UMETA(DisplayName = "Tip of the Right Hand"),
-    Joint_ThumbRight    = 25 UMETA(DisplayName = "Right Thumb"),
+    Joint_HandTipRight  = 23 UMETA(DisplayName = "Tip of the Right Hand"),
+    Joint_ThumbRight    = 24 UMETA(DisplayName = "Right Thumb"),
 };
 const unsigned int Joint_Count = (Joint_ThumbRight + 1);
 
@@ -111,17 +111,6 @@ struct FJoint
 
     UPROPERTY()
     TEnumAsByte<ETrackedState> TrackingState;
-};
-
-// represents orientation of a skeletal joint in camera space
-// two joints and an orientation make a bone
-USTRUCT(BlueprintType)
-struct FJointOrientation
-{
-    GENERATED_BODY()
-
-    UPROPERTY()
-    TEnumAsByte<EJoint> Type;
 
     UPROPERTY()
     FVector4 Orientation;

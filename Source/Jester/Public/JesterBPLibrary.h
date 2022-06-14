@@ -31,13 +31,6 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
     GENERATED_UCLASS_BODY()
 
     /**
-     * test functions
-     */
-
-    UFUNCTION(BlueprintCallable, Category = "Jester|Test", DisplayName = "Multiply Float by Ten")
-    static void MultiplyByTenTest(const float Param, float& Result);
-
-    /**
     * joint api
     */
 
@@ -96,7 +89,7 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
     */
 
     UFUNCTION(BlueprintPure, Category = "Jester|Lean", DisplayName = "Get Lean Amount")
-    static void GetLeanAmount(const TEnumAsByte<EBodyNumber> Body, float& Lean);
+    static void GetLeanAmount(const TEnumAsByte<EBodyNumber> Body, FVector2D& Lean);
 
     /**
     * device state
@@ -107,4 +100,14 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
  
     UFUNCTION(BlueprintPure, Category = "Jester|Device", DisplayName = "Get Device Pitch")
     static void GetDevicePitch(float& Pitch);
+
+    /**
+     * utility
+     */
+
+    UFUNCTION(BlueprintPure, Category = "Jester|Utility", DisplayName = "Convert CSP to Unreal Coord")
+    static void ConvertCoordCameraToUnreal(const FVector& in, FVector& out);
+
+    UFUNCTION(BlueprintPure, Category = "Jester|Utility", DisplayName = "Convert Unreal Coord to CSP")
+    static void ConvertCoordUnrealToCamera(const FVector& in, FVector& out);
 };
