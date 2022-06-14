@@ -154,3 +154,17 @@ void UJesterBPLibrary::ConvertCoordUnrealToCamera(const FVector& in, FVector& ou
 }
 
 #pragma endregion
+
+#pragma region gesture
+
+void UJesterBPLibrary::GetDiscreteGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, bool& Detected, float& Confidence)
+{
+    Found = FJesterModule::GetCurrentInstance().BodySensor.GetDiscreteGestureResult(Body, Name, Detected, Confidence);
+}
+
+void UJesterBPLibrary::GetContinuousGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, float& Progress)
+{
+    Found = FJesterModule::GetCurrentInstance().BodySensor.GetContinuousGestureResult(Body, Name, Progress);
+}
+
+#pragma endregion

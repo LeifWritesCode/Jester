@@ -110,4 +110,14 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
 
     UFUNCTION(BlueprintPure, Category = "Jester|Utility", DisplayName = "Convert Unreal Coord to CSP")
     static void ConvertCoordUnrealToCamera(const FVector& in, FVector& out);
+
+    /**
+     * gesture
+     */
+
+    UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Discrete Gesture Result")
+    static void GetDiscreteGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, bool& Detected, float& Confidence);
+
+    UFUNCTION(BlueprintPure, Category = "Jester|Gesture", DisplayName = "Get Continuous Gesture Result")
+    static void GetContinuousGestureResult(const EBodyNumber& Body, const FString& Name, bool& Found, float& Progress);
 };

@@ -4,12 +4,13 @@
 
 #include "BodySensor.h"
 
+#include <algorithm>
 #include "Runtime/Core/Public/Misc/ScopeLock.h"
 #include "Kinect.h"
 #include "Kinect.VisualGestureBuilder.h"
 
 // helper macro
-#define WAIT_OBJECT(n) (WAIT_OBJECT_0 + (n))
+#define WAIT_OBJECT(n) (WAIT_OBJECT_0 + n)
 
 // ms to wait for handles to timeout
 #define WAIT_TIME 1
@@ -33,7 +34,6 @@ BodySensor::~BodySensor()
     bodyReader->UnsubscribeFrameArrived(bodyWaitHandle);
     sensor->Close();
 
-    for (int i = 0; i < numGesturesInLibrary; ++i) SAFE_RELEASE(gestureLibrary[i]);
     SAFE_RELEASE(bodyReader);
     SAFE_RELEASE(bodySource);
 
@@ -50,35 +50,64 @@ BodySensor::~BodySensor()
     }
 }
 
+// man what am i to do with all these checks
 void BodySensor::Initialise(IKinectSensor* _sensor)
 {
     HRESULT result;
-    BOOLEAN sensorOpen;
 
     // i'm not so trusting as not to do this
     check(_sensor != nullptr);
     sensor = _sensor;
 
-    // attempt to open the sensor
-    sensor->get_IsOpen(&sensorOpen);
-    check(!sensorOpen);
-    if (!sensorOpen)
-    {
-        sensor->Open();
-        sensor->get_IsOpen(&sensorOpen);
-        check(sensorOpen);
-    }
-
     // attempt to get the frame source
-    sensor->get_BodyFrameSource(&bodySource);
-    check(bodySource != nullptr);
+    result = sensor->get_BodyFrameSource(&bodySource);
+    check(result == S_OK);
 
     // attempt to get the frame reader
     bodySource->OpenReader(&bodyReader);
-    check(bodyReader != nullptr);
+    check(result == S_OK);
 
     // and subscribe
     result = bodyReader->SubscribeFrameArrived(&bodyWaitHandle);
+    check(result == S_OK);
+
+    // prepare the gesture sources
+    for (int i = 0; i < BodyNumber_Count; ++i)
+    {
+        Skeleton* s = &skeletons[i];
+        result = CreateVisualGestureBuilderFrameSource(sensor, 0, &s->Gestures.Source);
+        check(result == S_OK);
+
+        result = s->Gestures.Source->OpenReader(&s->Gestures.Reader);
+        check(result == S_OK);
+
+        result = CreateVisualGestureBuilderDatabaseInstanceFromFile(L"C:\\Seated.gbd", &s->Gestures.Database);
+        check(result == S_OK);
+
+        uint32 numGestures;
+        IGesture** gestures;
+
+        result = s->Gestures.Database->get_AvailableGesturesCount(&numGestures);
+        check(result == S_OK);
+
+        gestures = new IGesture*[numGestures];
+        result = s->Gestures.Database->get_AvailableGestures(numGestures, gestures);
+        check(result == S_OK);
+
+        result = s->Gestures.Source->AddGestures(numGestures, gestures);
+        check(result == S_OK);
+
+        result = s->Gestures.Source->SubscribeTrackingIdLost(&s->Gestures.TrackingIdWaitHandle);
+        check(result == S_OK);
+
+        result = s->Gestures.Reader->SubscribeFrameArrived(&s->Gestures.GestureWaitHandle);
+        check(result == S_OK);
+
+        delete[] gestures;
+    }
+
+    // attempt to open the sensor
+    result = sensor->Open();
     check(result == S_OK);
 }
 
@@ -89,53 +118,51 @@ void BodySensor::Initialise(IKinectSensor* _sensor)
 // wait on all handles and then call the necessary function
 bool BodySensor::Tick(float deltaTime)
 {
-    HANDLE handles[] = {
-        reinterpret_cast<HANDLE> (bodyWaitHandle), /*
-        reinterpret_cast<HANDLE> (skeletons[Body_0].Gestures.WaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_1].Gestures.WaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_2].Gestures.WaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_3].Gestures.WaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_4].Gestures.WaitHandle),
-        reinterpret_cast<HANDLE> (skeletons[Body_5].Gestures.WaitHandle), */
-    };
-    
-    static size_t count = sizeof(handles) / sizeof(*handles);
-    switch (MsgWaitForMultipleObjects(count, handles, false, WAIT_TIME, QS_ALLINPUT))
+    // TODO: if multi-single wait experiment works, need to incorporate return result
+    bool result = true;
+
+    /*HANDLE handles[] = {
+        reinterpret_cast<HANDLE> (bodyWaitHandle),
+        reinterpret_cast<HANDLE> (skeletons[Body_0].Gestures.GestureWaitHandle),
+        reinterpret_cast<HANDLE> (skeletons[Body_1].Gestures.GestureWaitHandle),
+        reinterpret_cast<HANDLE> (skeletons[Body_2].Gestures.GestureWaitHandle),
+        reinterpret_cast<HANDLE> (skeletons[Body_3].Gestures.GestureWaitHandle),
+        reinterpret_cast<HANDLE> (skeletons[Body_4].Gestures.GestureWaitHandle),
+        reinterpret_cast<HANDLE> (skeletons[Body_5].Gestures.GestureWaitHandle),
+    };*/
+
+    DWORD signal;
+    HANDLE h;
+
+    // process body data, if present
+    h = reinterpret_cast<HANDLE>(bodyWaitHandle);
+    signal = WaitForSingleObject(h, 1);
+    if (signal == WAIT_OBJECT_0) ProcessBodyFrame();
+
+    // process each skellyboye, if present
+    for (int i = 0; i < BodyNumber_Count; ++i)
     {
-        case WAIT_OBJECT(0):
-            check(count != 0)
-            ProcessBodyFrame();
-            break;
-
-        case WAIT_OBJECT(1):
-            ProcessVgbSkeletonLost(Body_0);
-            break;
-
-        case WAIT_OBJECT(2):
-            ProcessVgbSkeletonLost(Body_1);
-            break;
-
-        case WAIT_OBJECT(3):
-            ProcessVgbSkeletonLost(Body_2);
-            break;
-
-        case WAIT_OBJECT(4):
-            ProcessVgbSkeletonLost(Body_3);
-            break;
-
-        case WAIT_OBJECT(5):
-            ProcessVgbSkeletonLost(Body_4);
-            break;
-
-        case WAIT_OBJECT(6):
-            ProcessVgbSkeletonLost(Body_5);
-            break;
-
-        case WAIT_TIMEOUT:
-            break;
+        h = reinterpret_cast<HANDLE>(skeletons[i].Gestures.GestureWaitHandle);
+        signal = WaitForSingleObject(h, 1);
+        if (signal == WAIT_OBJECT_0) ProcessVgbFrame((EBodyNumber)i);
     }
+    /*
+    static DWORD count = sizeof(handles) / sizeof(*handles);
+    DWORD signal = MsgWaitForMultipleObjectsEx(count, handles, 1, QS_ALLINPUT, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
+    if (signal != WAIT_FAILED && signal != WAIT_TIMEOUT && signal != WAIT_OBJECT_0 + count)
+    {
+        if (signal == WAIT_OBJECT_0)
+        {
+            ProcessBodyFrame();
+        }
+        else
+        {
+            ProcessVgbFrame((EBodyNumber)(signal - 1));
+        }
+        result = true;
+    }*/
 
-    return true;
+    return result;
 }
 
 #pragma endregion
@@ -172,18 +199,45 @@ FJoint * BodySensor::GetJointPtr(EBodyNumber skeletonId, EJoint joint)
     return &(skeletons[skeletonId].Joints[joint]);
 }
 
-bool BodySensor::GetContinuousGestureResult(EBodyNumber skeletonId, std::string gestureName, float* outResult)
+bool BodySensor::GetContinuousGestureResult(EBodyNumber skeletonId, FString gestureName, float& outResult)
 {
-    // TODO: GetContinuousGestureResult
     FScopeLock Lock(&apiMutex);
-    return false;
+    bool result = false;
+
+    Skeleton& s = skeletons[skeletonId];
+    std::vector<FGesture>::iterator it = std::find_if(s.Gestures.Detected.begin(), s.Gestures.Detected.end(), [gestureName](const FGesture& arg) { return arg.Name == gestureName; });
+    if (it != s.Gestures.Detected.end() && it->Type == Gesture_Continuous)
+    {
+        outResult = it->Progress;
+        result = true;
+    }
+
+    return result;
 }
 
-bool BodySensor::GetDiscreteGestureResult(EBodyNumber skeletonId, std::string gestureName, bool* outResult)
+bool BodySensor::GetDiscreteGestureResult(EBodyNumber skeletonId, FString gestureName, bool& outResult, float& outConfidence)
 {
-    // TODO: GetDiscreteGestureResult
     FScopeLock Lock(&apiMutex);
-    return false;
+    
+    FGesture f;
+    Skeleton& s = skeletons[skeletonId];
+    bool result = false;
+
+    /* should really be using the vector iterator with std::find_if,
+    however for a size 1 vector begin = 1 = end so that won't work for single gesture files. */
+    for (int i = 0; i < s.Gestures.Detected.size(); ++i)
+    {
+        f = s.Gestures.Detected[i];
+        if (f.Name == gestureName)
+        {
+            outResult = f.Detected;
+            outConfidence = f.Confidence;
+            result = true;
+            break;
+        }
+    }
+
+    return result;
 }
 
 #pragma endregion
@@ -226,15 +280,12 @@ void BodySensor::ProcessBodyFrame()
             // if applicable, regenerate the gesture sources (if the body was lost, for example)
             UINT64 trackingId;
             bodies[idx]->get_TrackingId(&trackingId);
-            /*
-            if (skeletons[idx].TrackingID != trackingId || skeletons[idx].Gestures.Source == nullptr)
-                RegenerateGestureSource((EBodyNumber)idx, trackingId);
-            */
-            skeletons[idx].TrackingID = trackingId;
-            
-            IBody* body = bodies[idx];
-            EBodyNumber num = (EBodyNumber)idx;
-            ConvertRepresentationKinectToJester(&body, num);
+            if (skeletons[idx].TrackingID != trackingId)
+            {
+                skeletons[idx].TrackingID = trackingId;
+                UpdateGestureSource((EBodyNumber)idx, trackingId);
+            }
+            ConvertRepresentationKinectToJester(&bodies[idx], (EBodyNumber)idx);
         }
     }
 
@@ -247,12 +298,6 @@ void BodySensor::ProcessBodyFrame()
 void BodySensor::ProcessVgbSkeletonLost(EBodyNumber skeletonId)
 {
     FScopeLock Lock(&apiMutex);
-    Skeleton* s = &skeletons[skeletonId];
-
-    if (s->Gestures.Reader != nullptr) s->Gestures.Reader->UnsubscribeFrameArrived(s->Gestures.GestureWaitHandle);
-    if (s->Gestures.Source != nullptr) s->Gestures.Source->UnsubscribeTrackingIdLost(s->Gestures.TrackingIdWaitHandle);
-    SAFE_RELEASE(s->Gestures.Reader);
-    SAFE_RELEASE(s->Gestures.Source);
 }
 
 void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
@@ -262,11 +307,16 @@ void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
     IVisualGestureBuilderFrameArrivedEventArgs* args = nullptr;
     IVisualGestureBuilderFrameReference* ref = nullptr;
     IVisualGestureBuilderFrame* frame = nullptr;
-    IGesture* g = nullptr;
-    GestureType t;
-    IDiscreteGestureResult* d = nullptr;
-    IContinuousGestureResult* c = nullptr;
+    GestureType type;
+    BOOLEAN detected;
+    float confidence;
+    float progress;
+    const char * gestureName = "Seated";
 
+    // clear out the existing list
+    s->Gestures.Detected.clear();
+
+    // pull the new frame
     result = s->Gestures.Reader->GetFrameArrivedEventData(s->Gestures.GestureWaitHandle, &args);
     if (result == S_OK)
         result = args->get_FrameReference(&ref);
@@ -276,32 +326,53 @@ void BodySensor::ProcessVgbFrame(EBodyNumber skeletonId)
 
     if (result == S_OK)
     {
-        s->Gestures.ContinuousGestureResults.clear();
-        s->Gestures.DiscreteGestureResults.clear();
+        // get the stored gestures
+        UINT numGestures = 0;
+        IGesture** gestures;
+        s->Gestures.Source->get_GestureCount(&numGestures);
 
-        for (int i = 0; i < numGesturesInLibrary; ++i)
+        gestures = new IGesture*[numGestures];
+        s->Gestures.Source->get_Gestures(numGestures, gestures);
+
+        // iterate over list and start to extract information
+        for (UINT id = 0; id < numGestures; ++id)
         {
-            g = gestureLibrary[i];
-            g->get_GestureType(&t);
-            switch (t)
-            {
-            case GestureType_Continuous:
-                result = frame->get_ContinuousGestureResult(g, &c);
-                if (result == S_OK)
-                {
-                    s->Gestures.ContinuousGestureResults.push_back(std::shared_ptr<IContinuousGestureResult>(c));
-                }
-                break;
+            result = gestures[id]->get_GestureType(&type);
 
-            case GestureType_Discrete:
-                result = frame->get_DiscreteGestureResult(g, &d);
-                if (result == S_OK)
+            // TODO: Understand why get_Name is throwing E_INVALIDARG
+            //result = gestures[id]->get_Name(32u, &gestureName[0]);
+
+            // for each gesture, check to see if it has been detected
+            if (type == GestureType_Discrete)
+            {
+                IDiscreteGestureResult* discrete;
+                result = frame->get_DiscreteGestureResult(gestures[id], &discrete);
+                if (result == S_OK && discrete)
                 {
-                    s->Gestures.DiscreteGestureResults.push_back(std::shared_ptr<IDiscreteGestureResult>(d));
+                    result = discrete->get_Detected(&detected);
+                    result = discrete->get_Confidence(&confidence);
                 }
-                break;
             }
+            else if (type == GestureType_Continuous)
+            {
+                IContinuousGestureResult* continuous;
+                result = frame->get_ContinuousGestureResult(gestures[id], &continuous);
+                if (result == S_OK && continuous)
+                {
+                    continuous->get_Progress(&progress);
+                }
+            }
+
+            FGesture g;
+            g.Type = TEnumAsByte<EGestureType>(type);
+            g.Detected = detected;
+            g.Name = FString(gestureName);
+            g.Confidence = type == GestureType_Discrete ? confidence : 0;
+            g.Progress = type == GestureType_Continuous ? progress : 0;
+            s->Gestures.Detected.push_back(g);
         }
+
+        delete[] gestures;
     }
 }
 
@@ -335,29 +406,11 @@ void BodySensor::ConvertRepresentationKinectToJester(IBody** body, EBodyNumber s
     }
 }
 
-void BodySensor::RegenerateGestureSource(EBodyNumber skeletonId, UINT64 newTrackingId)
+void BodySensor::UpdateGestureSource(EBodyNumber skeletonId, UINT64 newTrackingId)
 {
-    HRESULT result;
     Skeleton* s = &skeletons[skeletonId];
- 
-    // safe release all the sources, just in case
-    if (s->Gestures.Reader != nullptr) s->Gestures.Reader->UnsubscribeFrameArrived(s->Gestures.GestureWaitHandle);
-    if (s->Gestures.Source != nullptr) s->Gestures.Source->UnsubscribeTrackingIdLost(s->Gestures.TrackingIdWaitHandle);
-    SAFE_RELEASE(s->Gestures.Reader);
-    SAFE_RELEASE(s->Gestures.Source);
-
-    // rebuild!
-    result = CreateVisualGestureBuilderFrameSource(sensor, newTrackingId, &s->Gestures.Source);
-    if (result == S_OK)
-        result = s->Gestures.Source->SubscribeTrackingIdLost(&s->Gestures.TrackingIdWaitHandle);
-
-    if (result == S_OK)
-        result = s->Gestures.Source->OpenReader(&s->Gestures.Reader);
-
-    if (result == S_OK)
-        result = s->Gestures.Reader->SubscribeFrameArrived(&s->Gestures.GestureWaitHandle);
-
-    // TODO: Additional checks on gesture read readiness
+    if (s->Gestures.Source)
+        s->Gestures.Source->put_TrackingId(newTrackingId);
 }
 
 #pragma endregion

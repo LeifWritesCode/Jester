@@ -11,6 +11,14 @@
 #include "JesterTypes.generated.h"
 
 UENUM(BlueprintType)
+enum EGestureType
+{
+    Gesture_Continuous  = 0 UMETA(DisplayName = "Continuous"),
+    Gesture_Discrete    = 0 UMETA(DisplayName = "Discrete")
+};
+const unsigned int GestureType_Count = (Gesture_Discrete + 1);
+
+UENUM(BlueprintType)
 enum EHand
 {
     Hand_None       = 0 UMETA(DisplayName = "None"),
@@ -85,6 +93,29 @@ enum ETrackedState
 };
 const unsigned int TrackedState_Count = (TrackedState_Tracked + 1);
 
+// represents a user gesture, as detected by kinect
+USTRUCT(BlueprintType)
+struct FGesture
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    TEnumAsByte<EGestureType> Type;
+
+    UPROPERTY()
+    FString Name;
+
+    UPROPERTY()
+    bool Detected;
+
+    UPROPERTY()
+    float Confidence;
+
+    UPROPERTY()
+    float Progress;
+};
+
+// represents a single handle
 USTRUCT(BlueprintType)
 struct FHand
 {

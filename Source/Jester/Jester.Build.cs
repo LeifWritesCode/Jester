@@ -45,8 +45,8 @@ public class Jester : ModuleRules
         Console.WriteLine("\tCopying {0} to {1}.", file.FullName, dest);
         File.Copy(file.FullName, dest);
 
-        Console.WriteLine("\tDeferring load of {0} to runtime.", file.Name);
-        PublicDelayLoadDLLs.Add(file.Name);
+        Console.WriteLine("\tDeferring load of {0} to runtime.", file.FullName);
+        PublicDelayLoadDLLs.Add(file.FullName);
     }
 
     private void ImportFromDirectoryMatching(string dir, string match)
@@ -83,7 +83,7 @@ public class Jester : ModuleRules
         string redistPath = Path.Combine(KinectSdkPath, "redist");
         string vgbPath = Path.Combine(redistPath, "VGB", PlatformBitness);
         string vgbTechPath = Path.Combine(vgbPath, "vgbtechs");
-        string corePath = @"C:\Windows\System32\";
+        string corePath = Path.Combine(@"C:\Windows\", PlatformBitness == "x64" ? "SysWow64" : "System32");
         string dllPrefix = @"Kinect20";
         string dllSuffix = @".dll";
 
@@ -106,6 +106,9 @@ public class Jester : ModuleRules
 
         Console.WriteLine("Importing Kinect SDK Core from {0}", corePath);
         ImportAndCopy(new FileInfo(Path.Combine(corePath, "Kinect20.dll")));
+        ImportAndCopy(new FileInfo(Path.Combine(corePath, "k4wcll.dll")));
+        ImportAndCopy(new FileInfo(Path.Combine(corePath, "MSVCP110.dll")));
+        ImportAndCopy(new FileInfo(Path.Combine(corePath, "MSVCR110.dll")));
     }
 
 	public Jester(ReadOnlyTargetRules Target) : base(Target)

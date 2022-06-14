@@ -33,10 +33,10 @@ public:
     FJoint* GetJointPtr(EBodyNumber skeletonId, EJoint joint);
 
     // returns true and sets outResult if gesture is found, else false
-    bool GetContinuousGestureResult(EBodyNumber skeletonId, std::string gestureName, float* outResult);
+    bool GetContinuousGestureResult(EBodyNumber skeletonId, FString gestureName, float& outResult);
  
     // returns true and sets outResult if gesture is found, else false
-    bool GetDiscreteGestureResult(EBodyNumber skeletonId, std::string gestureName, bool* outResult);
+    bool GetDiscreteGestureResult(EBodyNumber skeletonId, FString gestureName, bool& outResult, float& outConfidence);
 
 private:
     // initialisation function
@@ -49,13 +49,14 @@ private:
     // frees up source assets when tracking is lost
     void ProcessVgbSkeletonLost(EBodyNumber skeletonId);
 
+    // process a frame from the visual gesture builder backend
     void ProcessVgbFrame(EBodyNumber skeletonId);
 
     // converts a Kinect IBody to a Jester Skeleton
     void ConvertRepresentationKinectToJester(IBody** body, EBodyNumber skeletonId);
 
     // creates the necessary assets for gesture recognition
-    void RegenerateGestureSource(EBodyNumber skeletonId, UINT64 newTrackingId);
+    void UpdateGestureSource(EBodyNumber skeletonId, UINT64 newTrackingId);
 
     // local copy so we can close it later
     IKinectSensor* sensor;
@@ -69,10 +70,6 @@ private:
     // source of body frames - not per skeleton
     IBodyFrameSource * bodySource;
     IBodyFrameReader * bodyReader;
-
-    // gestures loaded
-    size_t numGesturesInLibrary;
-    IGesture ** gestureLibrary;
 
     // the tracked skeletons
     Skeleton skeletons[BodyNumber_Count];

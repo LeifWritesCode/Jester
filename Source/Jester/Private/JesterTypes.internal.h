@@ -22,6 +22,9 @@ struct HandPair
 // represents a source of gesture data, per skeleton
 struct GestureSource
 {
+    // whether this GestureSource is presently capable of processing gestures
+    bool Tracked;
+
     // the handle on which to wait for lost tracking events
     WAITABLE_HANDLE TrackingIdWaitHandle;
 
@@ -34,9 +37,11 @@ struct GestureSource
     // the frame reader from which to obtain gestures
     IVisualGestureBuilderFrameReader* Reader;
 
+    // the gesture database from which to load gestures
+    IVisualGestureBuilderDatabase* Database;
+
     // storage for gesture results
-    std::vector<std::shared_ptr<IDiscreteGestureResult>> DiscreteGestureResults;
-    std::vector<std::shared_ptr<IContinuousGestureResult>> ContinuousGestureResults;
+    std::vector<FGesture> Detected;
 };
 
 // internal representation of a player skeleton
