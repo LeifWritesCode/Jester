@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "JesterDK",
+	"Description": "Unreal Engine 4 integration for Kinect for Windows v2",
+	"Category": "Other",
+	"CreatedBy": "Leif Walker-Grant",
+	"CreatedByURL": "https://code.leif.uk/lwg/jester",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "JesterDK",
+			"Type": "Runtime",
+			"LoadingPhase": "PreLoadingScreen"
+		}
+	]
+}
