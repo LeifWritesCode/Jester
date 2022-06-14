@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Jester",
+	"Description": "Kinect (V2) integration for Unreal Engine 4",
+	"Category": "Input Devices",
+	"CreatedBy": "Leif Walker-Grant",
+	"CreatedByURL": "https://github.com/ChampionOfGoats",
+	"DocsURL": "https://github.com/ChampionOfGoats/Jester",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/ChampionOfGoats/Jester",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "Jester",
+			"Type": "Runtime",
+			"LoadingPhase": "PreLoadingScreen"
+		}
+	]
+}
