@@ -104,6 +104,9 @@ class UJesterBPLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintPure, Category = "Jester|Device", DisplayName = "Get Device Pitch")
     static void GetDevicePitch(float& Pitch);
 
+    UFUNCTION(BlueprintPure, Category = "Jester|Device", DisplayName = "Get Device Height")
+    static void GetDeviceHeight(float& Height);
+
     /**
      * utility
      */

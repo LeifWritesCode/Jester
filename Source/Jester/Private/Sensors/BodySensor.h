@@ -27,6 +27,9 @@ public:
     // gets the x/y lean for the given body
     FVector2D GetLean(EBodyNumber skeletonId);
 
+    // gets the floor clip plane, from which we can derive height, pitch and adjusted positions
+    FVector4 GetFloorClipPlane();
+
     // returns the vector of gestures from the given body
     std::vector<FGesture> GetGestures(EBodyNumber skeletonId);
 
@@ -80,4 +83,6 @@ private:
 
     // the tracked skeletons
     Skeleton skeletons[BodyNumber_Count];
+
+    FVector4 floorClipPlane;
 };

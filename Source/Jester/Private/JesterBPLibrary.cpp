@@ -143,7 +143,14 @@ void UJesterBPLibrary::IsDeviceAwake(bool& IsAwake)
 
 void UJesterBPLibrary::GetDevicePitch(float& Pitch)
 {
-    // TODO: GetDevicePitch - this isn't exposed by the SDK - needs implementing through delta frames relative to floor plane
+    FVector4 fcp = FJesterModule::GetCurrentInstance().BodySensor.GetFloorClipPlane();
+    Pitch = FMath::Atan(fcp.Z / fcp.Y) * (180.0f / 3.14159265359f);
+}
+
+void UJesterBPLibrary::GetDeviceHeight(float& Height)
+{
+    // height of device is just W
+    Height = FJesterModule::GetCurrentInstance().BodySensor.GetFloorClipPlane().W;
 }
 
 #pragma endregion

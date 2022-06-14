@@ -164,6 +164,12 @@ FVector2D BodySensor::GetLean(EBodyNumber skeletonId)
     return skeletons[skeletonId].Lean;
 }
 
+FVector4 BodySensor::GetFloorClipPlane()
+{
+    FScopeLock Lock(&apiMutex);
+    return floorClipPlane;
+}
+
 std::vector<FGesture> BodySensor::GetGestures(EBodyNumber skeletonId)
 {
     if (skeletonId == BodyNumber_Count) return std::vector<FGesture>(0);
@@ -248,23 +254,22 @@ void BodySensor::ProcessBodyFrame()
     IBodyFrameReference *ref = nullptr;
     IBodyFrame *frame = nullptr;
     IBody *bodies[BodyNumber_Count] = { 0 };
+    Vector4 fcp;
+    UINT64 trackingId;
+    HandState hs;
     BOOLEAN tracked = FALSE;
     HRESULT result = S_OK;
 
-    // extract all the data
-    result = bodyReader->GetFrameArrivedEventData(bodyWaitHandle, &args);
-
-    if (result == S_OK)
-        result = args->get_FrameReference(&ref);
-
-    if (result == S_OK)
-        result = ref->AcquireFrame(&frame);
-
-    if (result == S_OK)
-        result = frame->GetAndRefreshBodyData(BodyNumber_Count, bodies);
-
-    if (result == S_OK)
+    // if we can get the event data, the ref, the frame and the data, continue
+    if (bodyReader->GetFrameArrivedEventData(bodyWaitHandle, &args) == S_OK &&
+        args->get_FrameReference(&ref) == S_OK &&
+        ref->AcquireFrame(&frame) == S_OK &&
+        frame->GetAndRefreshBodyData(BodyNumber_Count, bodies) == S_OK)
     {
+        // get floor clip plane
+        frame->get_FloorClipPlane(&fcp);
+        this->floorClipPlane = FVector4(fcp.x, fcp.y, fcp.z, fcp.w);
+
         // update all the things
         for (unsigned int idx = Body_0; idx < BodyNumber_Count; ++idx)
         {
@@ -273,28 +278,27 @@ void BodySensor::ProcessBodyFrame()
             bodies[idx]->get_IsTracked(&tracked);
             skeletons[idx].Tracked = tracked;
 
-            // if applicable, regenerate the gesture sources (if the body was lost, for example)
-            UINT64 trackingId;
-            bodies[idx]->get_TrackingId(&trackingId);
-            if (skeletons[idx].TrackingID != trackingId)
+            if (tracked)
             {
-                skeletons[idx].TrackingID = trackingId;
-                //UpdateGestureSource((EBodyNumber)idx, trackingId);
+                // get left hand
+                if (bodies[idx]->get_HandLeftState(&hs) == S_OK)
+                    skeletons[idx].Hands[Hand_LeftHand].Hand.State = TEnumAsByte<EHandTrackedState>(hs);
+
+                // get right hand
+                if (bodies[idx]->get_HandRightState(&hs) == S_OK)
+                    skeletons[idx].Hands[Hand_RightHand].Hand.State = TEnumAsByte<EHandTrackedState>(hs);
+
+                // if applicable, regenerate the gesture sources (if the body was lost, for example)
+                bodies[idx]->get_TrackingId(&trackingId);
+                if (skeletons[idx].TrackingID != trackingId)
+                {
+                    skeletons[idx].TrackingID = trackingId;
+                    //UpdateGestureSource((EBodyNumber)idx, trackingId);
+                }
+
+                // convert the joints and orientations into a Skeleton struct
+                ConvertRepresentationKinectToJester(&bodies[idx], (EBodyNumber)idx);
             }
-
-            ConvertRepresentationKinectToJester(&bodies[idx], (EBodyNumber)idx);
-
-			/*
-			HandState state;
-			if (bodies[idx]->get_HandLeftState(&state) == S_OK)
-			{
-				skeletons[(EBodyNumber)idx].Hands[Hand_LeftHand].Hand.State = TEnumAsByte<EHandTrackedState>(state);
-			}
-
-			if (bodies[idx]->get_HandRightState(&state) == S_OK)
-			{
-				skeletons[(EBodyNumber)idx].Hands[Hand_RightHand].Hand.State = TEnumAsByte<EHandTrackedState>(state);
-			}*/
         }
     }
 
